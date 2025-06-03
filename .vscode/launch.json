@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/lohan/faculdade/POO/trabalho/Atividade-Pr-tica-POO---Reserva-Hotel-/Atividade-POO---Padroes-de-projeto",
+      "program": "c:/Users/lohan/faculdade/POO/trabalho/Atividade-Pr-tica-POO---Reserva-Hotel-/Atividade-POO---Padroes-de-projeto/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}
