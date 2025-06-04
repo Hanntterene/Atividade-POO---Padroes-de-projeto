@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <fstream>
+#include <algorithm>
 
 #include "estrategiadesconto.h"
 
@@ -97,6 +99,76 @@ public:
     }
 
     bool confirmarReservaPorNome(const string &nomeCliente);
+
+    void salvarReservasEmArquivo(const string &nomeArquivo)
+    {
+        // Copia as reservas para ordenar
+        vector<Reserva> ordenadas = reservas;
+        // Ordena por dataCheckin (formato DD/MM/AAAA)
+        sort(ordenadas.begin(), ordenadas.end(), [](const Reserva &a, const Reserva &b)
+             { return a.getDataCheckin() < b.getDataCheckin(); });
+
+        ofstream arquivo(nomeArquivo);
+        if (!arquivo)
+        {
+            cout << "Erro ao abrir arquivo para salvar reservas.\n";
+            return;
+        }
+
+        for (const Reserva &r : ordenadas)
+        {
+            arquivo << r.getResumo() << "--------------------\n";
+        }
+        arquivo.close();
+        cout << "Reservas salvas em arquivo: " << nomeArquivo << endl;
+    }
+    void carregarReservasDeArquivo(const string &nomeArquivo)
+    {
+        ifstream arquivo(nomeArquivo);
+        if (!arquivo)
+            return; // Arquivo não existe, nada a carregar
+
+        string linha, atendente, cliente, cpf, localidade, tipoQuarto, dataCheckin, status;
+        int numeroDiarias;
+        float valorTotal, valorEntrada;
+
+        while (getline(arquivo, linha))
+        {
+            if (linha.find("Atendente: ") == 0)
+                atendente = linha.substr(11);
+            else if (linha.find("Cliente: ") == 0)
+            {
+                size_t pos1 = linha.find(": ") + 2;
+                size_t pos2 = linha.find(" (");
+                cliente = linha.substr(pos1, pos2 - pos1);
+                size_t pos3 = linha.find("(") + 1;
+                size_t pos4 = linha.find(")");
+                cpf = linha.substr(pos3, pos4 - pos3);
+            }
+
+            else if (linha.find("Localidade: ") == 0)
+                localidade = linha.substr(12);
+            else if (linha.find("Quarto: ") == 0)
+                tipoQuarto = linha.substr(8);
+            else if (linha.find("Check-in: ") == 0)
+                dataCheckin = linha.substr(10);
+            else if (linha.find("Diárias: ") == 0)
+                numeroDiarias = stoi(linha.substr(9));
+            else if (linha.find("Total: R$") == 0)
+                valorTotal = stof(linha.substr(9));
+            else if (linha.find("Entrada: R$") == 0)
+                valorEntrada = stof(linha.substr(11));
+            else if (linha.find("Status: ") == 0)
+                status = linha.substr(8);
+            else if (linha.find("--------------------") == 0)
+            {
+                Reserva r(atendente, cliente, cpf, localidade, tipoQuarto, dataCheckin, numeroDiarias, valorTotal, valorEntrada);
+                r.setConfirmada(status == "Confirmada");
+                reservas.push_back(r);
+            }
+        }
+        arquivo.close();
+    }
 };
 
 bool ControladorDeReservas::confirmarReservaPorNome(const string &nomeCliente)
@@ -385,6 +457,8 @@ int main()
             cout << "Bem-vindo, " << autenticado.getLogin() << "!" << endl
                  << endl;
             autenticadoFlag = true;
+            // Carrega reservas do arquivo ao iniciar
+            ControladorDeReservas::getInstancia()->carregarReservasDeArquivo("reservas.csv");
         }
         else
         {
@@ -510,6 +584,8 @@ int main()
 
     if (user_escolha == 3)
     {
+        // Salva as reservas antes de sair
+        ControladorDeReservas::getInstancia()->salvarReservasEmArquivo("reservas.csv");
         cout << "Saindo do sistema... Até logo!" << endl;
         return 0;
     }
