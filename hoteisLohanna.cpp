@@ -5,15 +5,88 @@
 #include <fstream>
 #include <algorithm>
 
-#include "estrategiadesconto.h"
-
+//using namespace std para evitar std:: em todo o código
 using namespace std;
+class Atendente; 
 
-// Forward declarations para permitir uso de Atendente e ControladorDeReservas em Reserva
-class Atendente;
-class ControladorDeReservas;
+// ============================ PADRÃO ESTRATÉGIA DE DESCONTO =========================
+// Interface base para estratégias de desconto
+class PoliticasdeDesconto
+{
+public:
+    virtual void calcular(float *valor) = 0;
+    virtual ~PoliticasdeDesconto() {}
+};
+
+// Estratégia: Sem desconto
+class SemDesconto : public PoliticasdeDesconto
+{
+public:
+    void calcular(float *valor) override
+    {
+        cout << "Esse cliente não tem desconto..." << endl;
+    }
+};
+
+// Estratégia: Cliente VIP (10% de desconto)
+class ClientesVIP : public PoliticasdeDesconto
+{
+public:
+    void calcular(float *valor) override
+    {
+        cout << "Esse cliente tem 10% de desconto." << endl;
+        *valor = *valor * 0.90;
+    }
+};
+
+// Estratégia: Baixa Temporada (20% de desconto)
+class BaixaTemporada : public PoliticasdeDesconto
+{
+public:
+    void calcular(float *valor) override
+    {
+        cout << "Esse cliente tem 20% de desconto" << endl;
+        *valor = *valor * 0.80;
+    }
+};
+
+// Estratégia: Promoção de Feriado (15% de desconto)
+class PromFeriado : public PoliticasdeDesconto{
+public:
+    void calcular(float *valor) override
+    {
+        cout << "Esse cliente tem 15% de desconto" << endl;
+        *valor = *valor * 0.85;
+    }
+};
+
+// Contexto para aplicar a estratégia de desconto
+class Desconto
+{
+private:
+    PoliticasdeDesconto *estrategia;
+
+public:
+    Desconto() { this->estrategia = nullptr; }
+    void calcularDesconto(float *valor)
+    {
+        if (this->estrategia != nullptr)
+        {
+            estrategia->calcular(valor);
+        }
+        else
+        {
+            cout << "nenhuma estrategia foi definida" << endl;
+        }
+    }
+    void setDesconto(PoliticasdeDesconto *novaEstrategia)
+    {
+        this->estrategia = novaEstrategia;
+    }
+};
 
 // ============================ CLASSE RESERVA =========================
+// Representa uma reserva de hotel
 class Reserva
 {
 private:
@@ -43,6 +116,7 @@ public:
 };
 
 // ============================ SINGLETON: CONTROLADOR DE RESERVAS =========================
+// Gerencia todas as reservas do sistema (Singleton)
 class ControladorDeReservas
 {
 private:
@@ -52,6 +126,7 @@ private:
     ControladorDeReservas() {}
 
 public:
+    // Retorna a instância única do controlador
     static ControladorDeReservas *getInstancia()
     {
         if (!instancia)
@@ -77,6 +152,7 @@ public:
         return true; // está disponível
     }
 
+    // Cria uma nova reserva e adiciona ao vetor
     Reserva criarReserva(string atendente, string cliente, string cpf, string localidade,
                          string tipoQuarto, string dataCheckin, int numeroDiarias,
                          float valorTotal, float valorEntrada)
@@ -93,13 +169,16 @@ public:
         return r;
     }
 
+    // Retorna todas as reservas
     const vector<Reserva> &getReservas() const
     {
         return reservas;
     }
 
+    // Confirma uma reserva pelo nome do cliente
     bool confirmarReservaPorNome(const string &nomeCliente);
 
+    // Salva todas as reservas em arquivo, ordenadas por data de check-in
     void salvarReservasEmArquivo(const string &nomeArquivo)
     {
         // Copia as reservas para ordenar
@@ -122,6 +201,8 @@ public:
         arquivo.close();
         cout << "Reservas salvas em arquivo: " << nomeArquivo << endl;
     }
+
+    // Carrega reservas do arquivo para o sistema
     void carregarReservasDeArquivo(const string &nomeArquivo)
     {
         ifstream arquivo(nomeArquivo);
@@ -171,6 +252,7 @@ public:
     }
 };
 
+// Implementação do método para confirmar reserva pelo nome
 bool ControladorDeReservas::confirmarReservaPorNome(const string &nomeCliente)
 {
     for (Reserva &r : reservas)
@@ -186,9 +268,11 @@ bool ControladorDeReservas::confirmarReservaPorNome(const string &nomeCliente)
     return false; // Nenhuma reserva com esse nome encontrada
 }
 
+// Inicialização do ponteiro estático do singleton
 ControladorDeReservas *ControladorDeReservas::instancia = nullptr;
 
 // ============================ CLASSE ATENDENTE =========================
+// Representa um atendente do hotel
 class Atendente
 {
 private:
@@ -235,6 +319,7 @@ public:
     }
 };
 
+// Lista de atendentes cadastrados
 vector<Atendente> Atendente::atendentes = {
     Atendente("atendente1", "senha1"),
     Atendente("atendente2", "senha2"),
@@ -242,6 +327,7 @@ vector<Atendente> Atendente::atendentes = {
     Atendente("atendente4", "senha4")};
 
 // ============================ IMPLEMENTAÇÃO MÉTODOS RESERVA =========================
+// Construtor da classe Reserva
 Reserva::Reserva(string atendente, string cliente, string cpf, string localidade,
                  string tipoQuarto, string dataCheckin, int numeroDiarias,
                  float valorTotal, float valorEntrada)
@@ -258,6 +344,7 @@ Reserva::Reserva(string atendente, string cliente, string cpf, string localidade
     this->confirmada = false;
 }
 
+// Retorna um resumo da reserva (para exibição e arquivo)
 string Reserva::getResumo() const
 {
     string status = confirmada ? "Confirmada" : "Pendente";
@@ -274,6 +361,7 @@ string Reserva::getTipoQuarto() const { return tipoQuarto; }
 bool Reserva::isConfirmada() const { return confirmada; }
 
 // ============================ MÉTODO ESTÁTICO: FAZER RESERVA =========================
+// Método para criar uma nova reserva interativamente
 void Reserva::fazerReserva(Atendente &autenticado)
 {
     cout << "============ PEGANDO DADOS ===========" << endl;
@@ -421,8 +509,9 @@ int main()
          << "1 - entrar" << endl
          << "2 - sair" << endl;
 
+    // Loop para garantir escolha válida do usuário
     while (true)
-    { // repetição infinita até valor válido
+    {
         try
         {
             cout << "Escolha: ";
@@ -445,6 +534,7 @@ int main()
     Atendente autenticado;
     string login, senha;
 
+    // Loop de autenticação
     while (!autenticadoFlag && user_escolha == 1)
     {
         cout << "Login: ";
@@ -469,6 +559,7 @@ int main()
     cout << "================ MENU ================" << endl;
     cout << "seja bem vindo(a) " << autenticado.getLogin() << "!" << endl;
 
+    // Loop principal do menu do sistema
     while (!(user_escolha == 3) && autenticadoFlag)
     {
         cout << endl
@@ -504,23 +595,24 @@ int main()
             cin.ignore();
             cin.get(); // Espera ENTER
 
+            // Submenu após visualizar reservas
             while (true)
             {
                 cout << "\nO que deseja fazer agora?\n";
-                cout << "1 - Realizar uma confirmação de reserva\n";
-                cout << "2 - Voltar ao menu principal\n";
-                cout << "3 - Sair do sistema\n";
+                cout << "1 - Voltar ao menu principal\n";
+                cout << "2 - Sair do sistema\n";
                 cout << "Escolha: ";
                 cin >> user_escolha;
-
                 if (user_escolha == 1)
                 {
+                    user_escolha = 1; // Volta para o menu principal
                     break;
                 }
-                else if (user_escolha == 3)
+                else if (user_escolha == 2)
                 {
                     cout << "Saindo do sistema... Até logo!" << endl;
-                    return 0;
+                    user_escolha = 3; // Sair do sistema
+                    break;
                 }
                 else
                 {
@@ -528,6 +620,7 @@ int main()
                 }
             }
         }
+        // ============================ CONFIRMAR RESERVA =========================
         if (user_escolha == 4)
         {
             cin.ignore();
@@ -543,6 +636,9 @@ int main()
                 cout << "Nenhuma reserva encontrada para o cliente \"" << nomeBusca << "\".\n";
             }
 
+            // Salva as reservas após confirmação
+            ControladorDeReservas::getInstancia()->salvarReservasEmArquivo("reservas.csv");
+
             cout << "\nPressione ENTER para voltar ao menu...";
             cin.get();
         }
@@ -551,7 +647,9 @@ int main()
         if (user_escolha == 2)
         {
             Reserva::fazerReserva(autenticado);
+            ControladorDeReservas::getInstancia()->salvarReservasEmArquivo("reservas.csv");
 
+            // Submenu após reservar
             while (true)
             {
                 cout << "\nO que deseja fazer agora?\n";
@@ -567,12 +665,12 @@ int main()
                 }
                 else if (user_escolha == 2)
                 {
+                    user_escolha = 1; // Volta para o menu principal
                     break;
                 }
                 else if (user_escolha == 3)
                 {
-                    cout << "Saindo do sistema... Até logo!" << endl;
-                    return 0;
+                    break; // Sair do sistema
                 }
                 else
                 {
@@ -582,9 +680,9 @@ int main()
         }
     }
 
+    // Salva as reservas antes de sair do sistema
     if (user_escolha == 3)
     {
-        // Salva as reservas antes de sair
         ControladorDeReservas::getInstancia()->salvarReservasEmArquivo("reservas.csv");
         cout << "Saindo do sistema... Até logo!" << endl;
         return 0;
